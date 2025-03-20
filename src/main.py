@@ -5,6 +5,9 @@ import traceback
 from pathlib import Path
 import sys
 
+# can't use "_". Nikon has it in default photo name
+FILENAME_DELIMITERS = ["-"]
+
 
 def pick_folder():
     """let user pick source folder, remove whitespaces, determine if it exists
@@ -43,8 +46,25 @@ def identify_files_for_removal(src, target):
     # filter the removal list, so only entries which does not have
     # a matching jpg will remain
     for jpg in jpgs:
-        if f"{jpg.stem.lower()}.orf" in orf_removal:
-            orf_removal.pop(orf_removal.index(f"{jpg.stem.lower()}.orf"))
+        # identify first delimiter and slice if it exists
+        filename = jpg.stem
+        delim_position = min(
+            (
+                filename.find(delim)
+                for delim in FILENAME_DELIMITERS
+                if filename.find(delim) != -1
+            ),
+            default=0,
+        )
+        if delim_position:
+            filename = filename[:delim_position]
+
+        # iterate through raw files. create a new list object to prevent iter+modify
+        # unfortunate Big-O decision. M*N can be ignored, expects max 1000 files.
+        for raw in list(orf_removal):
+            # if the sliced filename is at the start of the filename, take it off the deletion list
+            if filename.lower() in raw[: len(filename)].lower():
+                orf_removal.pop(orf_removal.index(raw))
 
     for_removal = [Path(target, f"{filename}") for filename in orf_removal]
     return for_removal
