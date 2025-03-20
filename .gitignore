@@ -2,3 +2,5 @@ venv
 output
 testdir
 demo.jpg
+dist
+build

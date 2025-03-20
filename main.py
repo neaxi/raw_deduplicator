@@ -1,4 +1,4 @@
-""" mamuti deduplikator v1 """
+"""mamuti deduplikator for raw photo filtering"""
 
 import traceback
 
@@ -8,13 +8,16 @@ import sys
 
 def pick_folder():
     """let user pick source folder, remove whitespaces, determine if it exists
+    verify "orf" folder exists, within source folder
     if it does not, prompt user again"""
     valid_src = False
     valid_dst = False
+
+    print(f"Current folder: {Path('').absolute()}")
     while not (valid_src and valid_dst):
         print("")
         src = input("Provide source folder: ")
-        src = Path(src.strip())
+        src = Path(src.strip())  # if not provided, uses pwd
         if src.exists():
             valid_src = True
         else:
@@ -31,14 +34,19 @@ def pick_folder():
 
 
 def identify_files_for_removal(src, target):
-    """chcek files in both folders, find which extras are in ORF,
+    """check files in both folders, find which extras are in ORF,
     case should be ignored on Windows => not handled"""
-    jpgs = [file.stem for file in src.iterdir() if file.suffix in (".jpg", ".JPG")]
-    orfs = [file.stem for file in target.iterdir() if file.suffix in (".orf", ".ORF")]
-
-    orf_extras = set(orfs) - set(jpgs)
+    jpgs = [file for file in src.iterdir() if file.suffix in (".jpg", ".JPG")]
     # .orf case not handled, Windows doesn't care
-    for_removal = [Path(target, f"{filename}.orf") for filename in orf_extras]
+    orf_removal = [f.name.lower() for f in target.iterdir()]
+
+    # filter the removal list, so only entries which does not have
+    # a matching jpg will remain
+    for jpg in jpgs:
+        if f"{jpg.stem.lower()}.orf" in orf_removal:
+            orf_removal.pop(orf_removal.index(f"{jpg.stem.lower()}.orf"))
+
+    for_removal = [Path(target, f"{filename}") for filename in orf_removal]
     return for_removal
 
 
@@ -89,7 +97,7 @@ def main():
     # identify files
     targeted_files = identify_files_for_removal(dir_source, dir_target)
     if not targeted_files:
-        input("No files detected for deletion")
+        print("No files detected for deletion")
         sys.exit(1)
 
     pprint_list_of_files(targeted_files)
@@ -97,9 +105,9 @@ def main():
     # commence deletion
     if confirm_prompt():
         delete_files(targeted_files)
-        input("Deletion complete")
+        print("Deletion complete")
     else:
-        input("Deletion aborted.")
+        print("Deletion aborted.")
 
 
 if __name__ == "__main__":
@@ -108,9 +116,12 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print("\n\nBye.")
     except SystemExit:
-        # raised intentionaly
+        # raised intentionally
         pass
     except BaseException:
-        # somethings broken. hang so the traceback can be copied out
+        # somethings broken. print traceback, instruct user
         traceback.print_exc()
-        input("\nSCRIPT CRASHED .. please send the output above to developer")
+        print("\nSCRIPT CRASHED .. please send the output above to developer")
+    finally:
+        # prevent closing the terminal window
+        _ = input()

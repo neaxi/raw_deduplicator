@@ -1,0 +1,35 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: check-ast
+      - id: check-case-conflict
+      - id: check-json
+      - id: check-yaml
+      - id: end-of-file-fixer
+      - id: no-commit-to-branch
+        args:
+          - "-b master"
+      - id: pretty-format-json
+        args:
+          - "--autofix"
+          - "--indent=4"
+      - id: trailing-whitespace
+  - repo: https://github.com/psf/black-pre-commit-mirror
+    rev: 25.1.0
+    hooks:
+      - id: black
+  -   repo: https://github.com/jsh9/pydoclint
+      rev: 0.6.2
+      hooks:
+      -   id: pydoclint
+          args: [--style=google, --check-return-types=True]
+  -   repo: local
+      hooks:
+      -   id: unittests
+          name: run unit tests
+          entry: python -m unittest
+          language: system
+          args: ["discover"]
+          always_run: true
+          pass_filenames: false
